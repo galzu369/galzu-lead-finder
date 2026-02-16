@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Galzu Lead Finder</title>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="header">
+        <div>
+          <div class="brand">Galzu Lead Finder</div>
+          <div class="muted">Local dashboard (runs on your PC)</div>
+        </div>
+        <nav class="tabs" aria-label="Navigation">
+          <button class="tabBtn active" data-tab="leads">Leads</button>
+          <button class="tabBtn" data-tab="maps">Google Maps</button>
+          <button class="tabBtn" data-tab="imports">Imports</button>
+        </nav>
+        <div class="kpis" id="kpis"></div>
+      </header>
+
+      <section class="panel tab" data-tab="maps" style="display: none">
+        <div class="panel-title">Google Maps leads</div>
+        <div class="muted">Wizard: search → scrape → auto-import. Keep Chrome open during the run.</div>
+
+        <div class="wizard" id="mapsWizard" style="margin-top: 12px">
+          <div class="wizard-steps">
+            <div class="wizard-step active" data-step="1">1. Search</div>
+            <div class="wizard-step" data-step="2">2. Scrape</div>
+            <div class="wizard-step" data-step="3">3. Imported</div>
+          </div>
+
+          <div class="wizard-body">
+            <div class="wizard-page" data-step="1">
+              <div class="grid grid-3">
+                <label>
+                  Trade / niche
+                  <input id="mapsNiche" type="text" placeholder="Electricians" />
+                </label>
+                <label>
+                  Location
+                  <input id="mapsLocation" type="text" placeholder="Mafra" />
+                </label>
+                <label>
+                  Max results
+                  <input id="mapsMax" type="number" min="3" max="120" value="5" />
+                </label>
+              </div>
+              <div class="row">
+                <button id="mapsRunBtn">Run</button>
+                <label class="inline checkbox">
+                  <input id="mapsHeadful" type="checkbox" checked />
+                  Show browser (recommended)
+                </label>
+                <div id="mapsStatus" class="muted"></div>
+              </div>
+              <div class="muted" style="margin-top: 8px">
+                Tip: start with 5 results. Google Maps scraping gets slower with higher counts and may need login/captcha.
+              </div>
+            </div>
+
+            <div class="wizard-page" data-step="2" style="display:none">
+              <div class="muted">Scraping in progress. If Google asks for login/captcha, complete it in the browser window.</div>
+              <div class="progress" style="margin-top: 12px">
+                <div class="progress-bar" id="mapsProgressBar"></div>
+              </div>
+              <div class="row" style="margin-top: 10px">
+                <div id="mapsRunStatus" class="muted"></div>
+              </div>
+            </div>
+
+            <div class="wizard-page" data-step="3" style="display:none">
+              <div class="success" id="mapsSuccessText">Imported.</div>
+              <div class="row" style="margin-top: 10px">
+                <button class="btn-ghost" id="mapsViewLeadsBtn">View imported leads</button>
+                <button class="btn-ghost" id="mapsNewRunBtn">New search</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="tab" data-tab="imports" style="display: none">
+      <section class="panel">
+        <div class="panel-title">Outreach</div>
+        <div class="muted">
+          One message/script you can reuse. Placeholders: {name} {website} {me} {my_site} {my_email} {offer}.
+        </div>
+        <div class="grid grid-3" style="margin-top: 10px">
+          <label>
+            Your name
+            <input id="myName" type="text" placeholder="Galzu" />
+          </label>
+          <label>
+            Your website
+            <input id="mySite" type="text" placeholder="https://galzu.pro" />
+          </label>
+          <label>
+            Your email
+            <input id="myEmail" type="text" placeholder="galzuconsult@gmail.com" />
+          </label>
+          <label class="span3">
+            Offer (used in messages)
+            <select id="myOffer">
+              <option value="Landing Page Express (48h) — from €150">Landing Page Express (48h) — from €150</option>
+              <option value="Landing + Ads Kit — from €300">Landing + Ads Kit — from €300</option>
+              <option value="MVP Starter (3–5 days) — from €450">MVP Starter (3–5 days) — from €450</option>
+              <option value="Free project review (reply in 24h)">Free project review (reply in 24h)</option>
+            </select>
+          </label>
+          <label class="span3">
+            Email subject
+            <input id="tplSubject" type="text" placeholder="Quick question about {name}" />
+          </label>
+          <label class="span3">
+            Message template
+            <textarea id="tplBody" class="tpl-body" placeholder="Hey {name} — I noticed..."></textarea>
+          </label>
+        </div>
+        <div class="row">
+          <select id="tplPreset">
+            <option value="trades" selected>Preset: Local service (trades)</option>
+            <option value="coaches">Preset: Coach / consultant</option>
+            <option value="founders">Preset: Solo founder (non-technical)</option>
+          </select>
+          <button class="btn-ghost" id="tplApplyPresetBtn">Apply preset</button>
+          <button id="tplSaveBtn">Save template</button>
+          <button class="btn-ghost" id="tplResetBtn">Reset</button>
+          <div id="tplStatus" class="muted"></div>
+        </div>
+      </section>
+
+      <details class="panel details">
+        <summary class="panel-title">Acquisition (import + discovery)</summary>
+        <div class="stack">
+          <section class="subpanel">
+            <div class="subpanel-title">Run discovery (X)</div>
+            <div class="grid">
+              <label>
+                Days
+                <input id="days" type="number" min="1" max="7" value="2" />
+              </label>
+              <label>
+                Language
+                <input id="lang" type="text" value="en" />
+              </label>
+              <label>
+                Max leads
+                <input id="max_leads" type="number" min="1" max="500" value="25" />
+              </label>
+              <label>
+                Min followers
+                <input id="min_followers" type="number" min="0" value="0" />
+              </label>
+              <label class="span2">
+                Keywords file (optional)
+                <input id="keywords_file" type="text" placeholder="x-lead-finder/keywords.default.txt" />
+              </label>
+              <label class="span2">
+                Seed CSV (optional)
+                <input id="seed_csv" type="text" placeholder="leads.csv" />
+              </label>
+            </div>
+            <div class="row">
+              <button id="runBtn">Run</button>
+              <div id="runStatus" class="muted"></div>
+            </div>
+          </section>
+
+          <section class="subpanel">
+            <div class="subpanel-title">Import leads (CSV)</div>
+            <div class="row">
+              <select id="importSource">
+                <option value="google_maps">google_maps</option>
+                <option value="instagram">instagram</option>
+                <option value="facebook">facebook</option>
+                <option value="manual" selected>manual</option>
+              </select>
+              <input id="importFile" type="file" accept=".csv,text/csv" />
+              <button id="importBtn">Import</button>
+              <div id="importStatus" class="muted"></div>
+            </div>
+            <div class="muted" style="margin-top: 8px">
+              Templates:
+              <a href="/static/templates/instagram_template.csv" target="_blank" rel="noreferrer">instagram_template.csv</a>
+              |
+              <a href="/static/templates/facebook_template.csv" target="_blank" rel="noreferrer">facebook_template.csv</a>
+              |
+              <span>Google Maps extension: use "Send to Galzu Lead Finder"</span>
+            </div>
+          </section>
+
+          <section class="subpanel">
+            <div class="subpanel-title">Website audit (weak website filter)</div>
+            <div class="row">
+              <label class="inline">
+                Max sites
+                <input id="auditMax" type="number" min="1" max="300" value="25" />
+              </label>
+              <label class="inline">
+                Delay (seconds)
+                <input id="auditSleep" type="number" min="0" step="0.2" value="1.0" />
+              </label>
+              <button id="auditBtn">Audit websites</button>
+              <div id="auditStatus" class="muted"></div>
+            </div>
+            <div class="muted" style="margin-top: 8px">
+              This fetches public pages with rate limits and stores a simple quality score + verdict (no deep crawling).
+            </div>
+          </section>
+
+          <section class="subpanel">
+            <div class="subpanel-title">Instagram (Meta API) - import strong leads</div>
+            <div class="row">
+              <label class="inline">
+                IG user id
+                <input id="igUserId" type="text" placeholder="178414..." />
+              </label>
+              <label class="inline">
+                Media
+                <input id="igMediaLimit" type="number" min="1" max="50" value="10" />
+              </label>
+              <label class="inline">
+                Comments per media
+                <input id="igCommentsLimit" type="number" min="1" max="100" value="50" />
+              </label>
+              <label class="inline">
+                Max users
+                <input id="igMaxUsers" type="number" min="1" max="1000" value="150" />
+              </label>
+              <label class="inline">
+                Enrich
+                <select id="igEnrich">
+                  <option value="yes" selected>yes</option>
+                  <option value="no">no</option>
+                </select>
+              </label>
+              <button id="igRunBtn">Import IG commenters</button>
+              <div id="igStatus" class="muted"></div>
+            </div>
+            <div class="muted" style="margin-top: 8px">
+              Requires `META_ACCESS_TOKEN` and `META_IG_USER_ID` in `galzu-lead-finder-dashboard/.env` (recommended). Official API note: hashtag discovery does not provide usernames; commenters do.
+            </div>
+          </section>
+        </div>
+      </details>
+      </div>
+
+      <section class="panel tab" data-tab="leads">
+        <div class="panel-title">Leads</div>
+        <div class="row row-sticky">
+          <input id="q" type="text" placeholder="Search name, handle, website, phone, email..." />
+          <select id="statusFilter">
+            <option value="">all statuses</option>
+            <option value="new">new</option>
+            <option value="qualified">qualified</option>
+            <option value="contacted">contacted</option>
+            <option value="appointment_booked">appointment_booked</option>
+            <option value="won">won</option>
+            <option value="not_fit">not_fit</option>
+          </select>
+          <select id="sourceFilter">
+            <option value="">all sources</option>
+            <option value="x">x</option>
+            <option value="google_maps">google_maps</option>
+            <option value="instagram">instagram</option>
+            <option value="facebook">facebook</option>
+            <option value="manual">manual</option>
+          </select>
+          <label class="inline checkbox">
+            <input id="hasPhone" type="checkbox" />
+            has phone
+          </label>
+          <label class="inline checkbox">
+            <input id="hasEmail" type="checkbox" />
+            has email
+          </label>
+          <label class="inline">
+            Min score
+            <input id="minScore" type="number" min="0" max="100" value="0" />
+          </label>
+          <select id="websiteVerdictFilter">
+            <option value="">all website verdicts</option>
+            <option value="no_website">no_website</option>
+            <option value="weak_link_in_bio">weak_link_in_bio</option>
+            <option value="parked_or_placeholder">parked_or_placeholder</option>
+            <option value="unreachable">unreachable</option>
+            <option value="weak_site">weak_site</option>
+            <option value="basic_site">basic_site</option>
+            <option value="good_site">good_site</option>
+          </select>
+          <label class="inline">
+            Max website score
+            <input id="maxWebsiteScore" type="number" min="0" max="100" value="100" />
+          </label>
+          <button id="refreshBtn">Refresh</button>
+        </div>
+
+        <div class="table-wrap">
+          <table id="leadsTable">
+            <thead>
+              <tr>
+                <th>Lead</th>
+                <th>Contact</th>
+                <th>Score</th>
+                <th>Source</th>
+                <th>Location</th>
+                <th>Website</th>
+                <th>Website rating</th>
+                <th>Status</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="footer muted">
+        Tip: keep your Bearer token in <code>x-lead-finder/.env</code>.
+      </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
+

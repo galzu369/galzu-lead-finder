@@ -1,0 +1,34 @@
+# Env and secrets — do not commit
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# App data and cache
+data/
+.cache/
+*.sqlite
+*.db
+
+# Playwright (browser profile / artifacts)
+.cache/playwright_chromium_profile/
+
+# Node (if you add frontend tooling later)
+node_modules/
+
+# IDE / editor
+.cursor/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
