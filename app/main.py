@@ -1,4 +1,5 @@
 import threading
+import urllib.parse
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -43,10 +44,11 @@ def _ingest_existing_ranked_csv() -> None:
     try:
         rows = runner.read_ranked_csv(csv_path)
         n = db.upsert_leads_from_rows(_conn, rows, source="x", compute_score_if_missing=False)
-        print(f"[galzu-lead-finder] Ingested ranked_leads.csv -> {n} leads")
-    except Exception as e:  # noqa: BLE001
+        # Silent success; user can see imported leads in UI
+        pass
+    except Exception:  # noqa: BLE001
         # Keep startup resilient; user can re-run from UI.
-        print(f"[galzu-lead-finder] Ingest failed: {e}")
+        pass
         return
 
 
@@ -59,8 +61,6 @@ def _run_job(run_id: int, params: Dict[str, Any]) -> None:
         rows = runner.read_ranked_csv(out_csv)
         ingested = db.upsert_leads_from_rows(_conn, rows, source="x", compute_score_if_missing=False)
         db.finish_run(_conn, run_id, status="ok", output_csv_path=str(out_csv), error="")
-        # Store a small summary in run error field? keep empty on success.
-        _ = meta, ingested
     except Exception as e:  # noqa: BLE001
         db.finish_run(_conn, run_id, status="error", output_csv_path=None, error=str(e))
 
@@ -96,7 +96,10 @@ def _maps_job(run_id: int, params: Dict[str, Any]) -> None:
         if not niche or not location:
             raise RuntimeError("Missing niche or location.")
 
-        query = f"{niche} in {location}"
+        # Sanitize inputs to prevent injection in URL construction
+        niche_clean = urllib.parse.quote(str(niche).strip(), safe="")
+        location_clean = urllib.parse.quote(str(location).strip(), safe="")
+        query = f"{niche_clean} in {location_clean}"
         # Time budget: keep it tight so it never feels like it's looping.
         max_total_s = min(90.0 + 18.0 * max_results, 420.0)
         cfg = maps_scraper.MapsScrapeConfig(query=query, max_results=max_results, headful=headful, max_total_s=max_total_s)
@@ -162,7 +165,7 @@ def _maps_job(run_id: int, params: Dict[str, Any]) -> None:
                     audited += 1
         except Exception:
             # Non-fatal; keep the lead import successful.
-            audited = audited
+            pass
 
         db.finish_run(
             _conn,

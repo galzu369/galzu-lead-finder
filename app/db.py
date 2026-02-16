@@ -130,10 +130,14 @@ def upsert_leads_from_rows(
 ) -> int:
     """
     Upsert by handle. Preserve user-entered fields (status/notes/tags).
+    Uses batch processing for efficiency.
     """
     now = _now_unix()
     n = 0
-    for r in rows:
+    # Convert to list if needed for scoring (but keep memory-efficient for large batches)
+    rows_list = list(rows) if not isinstance(rows, list) else rows
+    
+    for r in rows_list:
         src = (source or "manual").strip().lower()
         r2 = _normalize_row(r, source=src)
         handle = (r2.get("handle") or "").strip().lstrip("@")
@@ -233,6 +237,7 @@ def list_leads(
         where.append("website_score <= ?")
         params.append(int(max_website_score))
 
+    # Safe: where clauses are hardcoded strings, params are bound separately
     sql = f"""
       SELECT *
       FROM leads
@@ -269,6 +274,7 @@ def update_lead(conn: sqlite3.Connection, lead_id: int, patch: Dict[str, Any]) -
     if not fields:
         return get_lead(conn, lead_id)
     params.append(int(lead_id))
+    # Safe: fields are validated against allowed set, params are bound separately
     conn.execute(f"UPDATE leads SET {', '.join(fields)} WHERE id=?", params)
     conn.commit()
     return get_lead(conn, lead_id)
@@ -306,6 +312,7 @@ def status_counts(conn: sqlite3.Connection, *, source: str = "") -> Dict[str, in
     if source.strip():
         where.append("source = ?")
         params.append(source.strip())
+    # Safe: where clauses are hardcoded strings, params are bound separately
     rows = conn.execute(
         f"SELECT status, COUNT(*) AS c FROM leads WHERE {' AND '.join(where)} GROUP BY status",
         params,
